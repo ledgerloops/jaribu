@@ -2,8 +2,9 @@ import { createInterface } from 'readline';
 import { createReadStream } from 'fs';
 const DEBTCSV = `./debt.csv`;
 
-export async function getDebtGraph(): Promise<{ [from: string]: { [to: string ]: number } }> {
-  const ret: { [from: string]: { [to: string ]: number } } = {};
+export type DebtGraph = { [from: string]: { [to: string ]: number } };
+export async function getDebtGraph(): Promise<DebtGraph> {
+  const ret: DebtGraph = {};
   const lineReader = createInterface({
     input: createReadStream(DEBTCSV),
   });
