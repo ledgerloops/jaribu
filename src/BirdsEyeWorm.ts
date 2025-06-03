@@ -5,9 +5,15 @@ const MAX_NUM_STEPS = 1000000;
 let longestLoop = [];
 let longestLoopAmount = 0;
 
-export function printLine(preface: string, first: string[], second: string[]): void {
-  const firstStr = first.length > 0 ? `[ ${first.map(x => `'${x}'`).join(', ')} ]` : `[]`;
-  const secondStr = second.length > 0 ? `[ ${second.map(x => `'${x}'`).join(', ')} ]` : `[]`;
+export function printLine(
+  preface: string,
+  first: string[],
+  second: string[],
+): void {
+  const firstStr =
+    first.length > 0 ? `[ ${first.map((x) => `'${x}'`).join(', ')} ]` : `[]`;
+  const secondStr =
+    second.length > 0 ? `[ ${second.map((x) => `'${x}'`).join(', ')} ]` : `[]`;
   console.log(`${preface} ${firstStr} ${secondStr}`);
 }
 
@@ -17,7 +23,7 @@ export class BirdsEyeWorms {
     [loopLength: number]: {
       numFound: number;
       totalAmount: number;
-    }
+    };
   } = {};
   private probingReport: boolean;
   private solutionFile: string;
@@ -32,12 +38,12 @@ export class BirdsEyeWorms {
   }
   report(loopLength: number, amount: number): void {
     // if (loopLength > 2) {
-      // console.log('report', loopLength, amount);
+    // console.log('report', loopLength, amount);
     // }
     if (typeof this.stats[loopLength] === 'undefined') {
       this.stats[loopLength] = {
         numFound: 0,
-        totalAmount: 0
+        totalAmount: 0,
       };
     }
     this.stats[loopLength].numFound++;
@@ -55,7 +61,7 @@ export class BirdsEyeWorms {
   getSmallestWeight(loop: string[]): number {
     let smallestWeight = Infinity;
     for (let k = 0; k < loop.length - 1; k++) {
-      const thisWeight = this.graph.getWeight(loop[k], loop[k+1]);
+      const thisWeight = this.graph.getWeight(loop[k], loop[k + 1]);
       // console.log(`Weight on loop from ${loop[k]} to ${loop[k+1]} is ${thisWeight}`);
       if (thisWeight < smallestWeight) {
         smallestWeight = thisWeight;
@@ -72,10 +78,13 @@ export class BirdsEyeWorms {
     }
     let firstZeroPos;
     for (let k = 0; k < loop.length - 1; k++) {
-      if ((this.graph.getWeight(loop[k], loop[k+1]) === smallestWeight) && (typeof firstZeroPos === 'undefined')) {
+      if (
+        this.graph.getWeight(loop[k], loop[k + 1]) === smallestWeight &&
+        typeof firstZeroPos === 'undefined'
+      ) {
         firstZeroPos = k;
       }
-      this.addTransfer(loop[k+1], loop[k], smallestWeight);
+      this.addTransfer(loop[k + 1], loop[k], smallestWeight);
     }
     // const after = this.graph.getTotalWeight();
     // console.log('total graph weight reduced by', before - after);
@@ -99,7 +108,10 @@ export class BirdsEyeWorms {
       // console.log('picking first option from', newStep);
       // console.log(path);
       const backtracked = [];
-      while (path.length > 0 && !this.graph.hasOutgoingLinks(path[path.length - 1])) {
+      while (
+        path.length > 0 &&
+        !this.graph.hasOutgoingLinks(path[path.length - 1])
+      ) {
         // console.log('no outgoing links', path);
         // backtrack
         const previousStep = path.pop();
@@ -122,7 +134,7 @@ export class BirdsEyeWorms {
           // console.log('continuing from', path, newStep);
         }
         newStep = this.graph.getFirstOutgoingNode(newStep);
-        // console.log('considering', path, newStep); 
+        // console.log('considering', path, newStep);
       }
       // check for loops in path
       const pos = path.indexOf(newStep);
@@ -131,13 +143,19 @@ export class BirdsEyeWorms {
         const smallestWeight = this.netLoop(loop);
         // this.printLine(`found loop `, path, loop);
         if (this.solutionFile) {
-          await appendFile(this.solutionFile, loop.slice(0, loop.length - 1).concat(smallestWeight).join(' ') + '\n');
+          await appendFile(
+            this.solutionFile,
+            loop
+              .slice(0, loop.length - 1)
+              .concat(smallestWeight)
+              .join(' ') + '\n',
+          );
         }
 
-                if (path.length === 0) {
-                console.log('we are done here');
-                return counter;
-                }
+        if (path.length === 0) {
+          console.log('we are done here');
+          return counter;
+        }
         newStep = this.graph.getFirstOutgoingNode(path[path.length - 1]);
         // console.log(`Continuing with`, path, newStep);
       }
@@ -159,7 +177,11 @@ export class BirdsEyeWorms {
         if (e.message === 'Graph is empty') {
           // We're done!
           console.log(`Done`);
-          console.log(longestLoop.join(' '), longestLoopAmount, longestLoop.length);
+          console.log(
+            longestLoop.join(' '),
+            longestLoopAmount,
+            longestLoop.length,
+          );
           return;
         } else {
           throw e;
@@ -167,7 +189,7 @@ export class BirdsEyeWorms {
       }
       console.log(`Starting worm in node ${startNode}`);
       counter += await this.runOneWorm(startNode);
-    } while(counter < MAX_NUM_STEPS);
+    } while (counter < MAX_NUM_STEPS);
     console.log(longestLoop.join(' '), longestLoopAmount, longestLoop.length);
   }
 }
