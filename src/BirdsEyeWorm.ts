@@ -162,7 +162,7 @@ export class BirdsEyeWorm {
               this.solutionFile,
               loop
                 .slice(0, loop.length - 1)
-                .concat(smallestWeight)
+                .concat(smallestWeight.toString())
                 .join(' ') + '\n',
             );
           }
