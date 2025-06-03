@@ -10,10 +10,11 @@ type Message = {
   args: string[]
 };
 
-const CHUNK_SIZE = 1000 * 1000;
+const CHUNK_SIZE = 1000;
 
 class Jaribu {
   name: string;
+  currentProbe: string | undefined = undefined;
   sendMessage: (m: Message) => void;
   outgoing: string[] = [];
   incoming: string[] = [];
@@ -31,57 +32,29 @@ class Jaribu {
       this.outgoing.push(to);
     }
   }
-  async execute(command: string, args: string[]): Promise<void> {
-    if (command !== 'probe') {
-      throw new Error(`Unknown command ${command}`);
-    }
-    // console.log('executing', command, args, this.outgoing.length);
-    if (this.outgoing.length > 0) {
-      this.sendMessage({
-        to: this.outgoing[0],
-        command: 'probe',
-        args: args.concat(this.outgoing[0])
-      });
-    }
-  }
 }
 
 class Network {
   debt: DebtGraph;
   probes: { [probeId: string]: Probe } = {};
   nodes: { [name: string]: Jaribu } = {};
-  validateMessage(name: string, message: Message): void {
-    console.log(`Node ${name} sends ${message.command} message to ${message.to}`, message.args);
-    if ((message.command === 'probe')
-      && (message.args.length >= 4) // probeId, from, name, next
-      && (name === message.args[message.args.length - 2])
-      && (message.to === message.args[message.args.length - 1])) {
-      const probeId = message.args[0];
-      const newHops = message.args.slice(1);
-      if (newHops.length != this.probes[probeId].nodes.length + 1) {
-        throw new Error(`This probe message does not add exactly one hop to probe ${probeId}`);
-      }
-      for (let i = 0; i < this.probes[probeId].nodes.length; i++) {
-        if (this.probes[probeId].nodes[i] !== newHops[i]) {
-          throw new Error(`This probe message incorrectly copies hop ${i} from probe ${probeId}`);
-        }
-      }
-      if (this.probes[probeId].nodes[this.probes[probeId].nodes.length - 1] === name) {
-        this.probes[probeId] = { nodes: newHops };
-      }
+  addHop(name: string, probeId: string): void {
+    if (this.nodes[name].outgoing.length > 0) {
+      // console.log('addHop', probeId, this.probes[probeId].nodes, this.nodes[name].outgoing[0]);
+      this.probes[probeId].nodes.push(this.nodes[name].outgoing[0]);
     }
   }
-  handleMessage(name: string, message: Message): void {
-    void name;
-    // this.validateMessage(name, message);
-    const probeId = message.args[0];
-    const newHops = message.args.slice(1);
-    this.probes[probeId] = { nodes: newHops };
+  maybeAddHop(name: string, probeId: string): void {
+    if (this.nodes[name].currentProbe === undefined) {
+      this.nodes[name].currentProbe = probeId;
+      this.addHop(name, probeId); 
+    } else {
+      console.log(`Not adding hop (busy with ${this.nodes[name].currentProbe})`, probeId, this.probes[probeId].nodes, this.nodes[name].outgoing[0]);
+    }
   }
   ensureNode(name: string): void {
     if (typeof this.nodes[name] === 'undefined') {
-      this.nodes[name] = new Jaribu(name, (message: Message) => {
-        this.handleMessage(name, message);
+      this.nodes[name] = new Jaribu(name, () => {
       });
     }
   }
@@ -113,7 +86,8 @@ class Network {
         // console.log('doing task', i);
         const probeId = Object.keys(this.probes)[i];
         const nodes = this.probes[probeId].nodes;
-        this.nodes[nodes[nodes.length - 1]].execute('probe', [probeId].concat(nodes));
+        const lastHop = nodes[nodes.length - 1];
+        this.maybeAddHop(lastHop, probeId);
       }
       console.log(`Another ${CHUNK_SIZE} tasks done of ${Object.keys(this.probes).length}`);
       await new Promise(resolve => setTimeout(resolve, 0)); // I think this helps node obey Ctrl-C interrupts
