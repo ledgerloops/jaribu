@@ -1,6 +1,6 @@
 import { createInterface } from 'readline';
 import { createReadStream } from 'fs';
-import { BirdsEyeWorms } from './BirdsEyeWorm.js';
+import { BirdsEyeWorms } from './BirdsEyeWorms.js';
 
 const DEBTCSV = process.argv[2] || './debt.csv';
 const SOLUTIONCSV = process.argv[3] || './solution.csv';
@@ -15,7 +15,7 @@ const lineReader = createInterface({
 });
 let totalTransAmount = 0;
 let numTrans = 0;
-const birdsEyeWorm = new BirdsEyeWorms(true, SOLUTIONCSV);
+const birdsEyeWorms = new BirdsEyeWorms(true, SOLUTIONCSV);
 lineReader.on('line', function (line) {
   const [from, to, amountStr] = line.split(' ');
   if (typeof linksCheck[from] === 'undefined') {
@@ -25,7 +25,7 @@ lineReader.on('line', function (line) {
     linksCheck[from][to] = 0;
   }
   linksCheck[from][to] += amountStr;
-  birdsEyeWorm.addTransfer(from, to, parseFloat(amountStr));
+  birdsEyeWorms.addTransfer(from, to, parseFloat(amountStr));
   numTrans++;
   totalTransAmount += parseFloat(amountStr);
 });
@@ -52,15 +52,15 @@ lineReader.on('close', async function () {
   }
 
   // throw new Error('links check OK!');
-  await birdsEyeWorm.runWorms();
-  Object.keys(birdsEyeWorm.stats)
+  await birdsEyeWorms.runWorms();
+  Object.keys(birdsEyeWorms.stats)
     .filter((loopLength) => loopLength !== '2')
     .forEach((loopLength: string) => {
       console.log(
-        `Length ${loopLength}: found ${birdsEyeWorm.stats[loopLength].numFound} loops, average amount: around ${Math.round(birdsEyeWorm.stats[loopLength].totalAmount / birdsEyeWorm.stats[loopLength].numFound)}`,
+        `Length ${loopLength}: found ${birdsEyeWorms.stats[loopLength].numFound} loops, average amount: around ${Math.round(birdsEyeWorms.stats[loopLength].totalAmount / birdsEyeWorms.stats[loopLength].numFound)}`,
       );
     });
-  const links = birdsEyeWorm.graph.getLinks();
+  const links = birdsEyeWorms.graph.getLinks();
   let numLinks = 0;
   Object.keys(links).forEach((from) => {
     numLinks += Object.keys(links[from]).length;
@@ -75,11 +75,11 @@ lineReader.on('close', async function () {
   let totalNum = 0;
   let totalMultilateral = 0;
   // const totalBilateral = birdsEyeWorm.stats[2].totalAmount;
-  Object.keys(birdsEyeWorm.stats).map((numStr) => {
+  Object.keys(birdsEyeWorms.stats).map((numStr) => {
     if (numStr !== '2') {
       totalMultilateral +=
-        birdsEyeWorm.stats[numStr].totalAmount * parseInt(numStr);
-      totalNum += birdsEyeWorm.stats[numStr].numFound;
+        birdsEyeWorms.stats[numStr].totalAmount * parseInt(numStr);
+      totalNum += birdsEyeWorms.stats[numStr].numFound;
     }
   });
   const amountLeft = totalTransAmount - totalMultilateral;
