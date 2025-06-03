@@ -25,6 +25,7 @@ export class BirdsEyeWorm {
       totalAmount: number;
     };
   } = {};
+  private path: string[];
   private probingReport: boolean;
   private solutionFile: string;
   constructor(probingReport: boolean, solutionFile?: string) {
@@ -101,7 +102,7 @@ export class BirdsEyeWorm {
   // removes dead ends as it finds them.
   // nets loops as it finds them.
   async runWorm(): Promise<void> {
-    let path = [];
+    this.path = [];
     let numLoopsFound = 0;
     const progressPrinter = setInterval(() => {
       console.log(`Found ${numLoopsFound} loops so far`);
@@ -114,47 +115,47 @@ export class BirdsEyeWorm {
     let counter = 0;
     try {
       while (counter++ < MAX_NUM_STEPS) {
-        // console.log('Step', path, newStep);
-        path.push(newStep);
+        // console.log('Step', this.path, newStep);
+        this.path.push(newStep);
         // console.log('picking first option from', newStep);
-        // console.log(path);
+        // console.log(this.path);
         const backtracked = [];
         while (
-          path.length > 0 &&
-          !this.graph.hasOutgoingLinks(path[path.length - 1])
+          this.path.length > 0 &&
+          !this.graph.hasOutgoingLinks(this.path[this.path.length - 1])
         ) {
-          // console.log('no outgoing links', path);
+          // console.log('no outgoing links', this.path);
           // backtrack
-          const previousStep = path.pop();
+          const previousStep = this.path.pop();
           backtracked.push(previousStep);
-          if (path.length > 0) {
-            this.graph.removeLink(path[path.length - 1], previousStep);
+          if (this.path.length > 0) {
+            this.graph.removeLink(this.path[this.path.length - 1], previousStep);
           }
         }
-        // we now now that either newStep has outgoing links, or path is empty
-        if (path.length === 0) {
+        // we now now that either newStep has outgoing links, or this.path is empty
+        if (this.path.length === 0) {
           if (backtracked.length > 0) {
-            // this.printLine('finished   ', path, backtracked.reverse());
+            // this.printLine('finished   ', this.path, backtracked.reverse());
           }
-          // no paths left, start with a new worm
-          path = [];
+          // no this.paths left, start with a new worm
+          this.path = [];
           newStep = this.graph.getFirstNode();
         } else {
           if (backtracked.length > 0) {
-            // this.printLine('backtracked', path, backtracked.reverse());
-            newStep = path[path.length - 1];
-            // console.log('continuing from', path, newStep);
+            // this.printLine('backtracked', this.path, backtracked.reverse());
+            newStep = this.path[this.path.length - 1];
+            // console.log('continuing from', this.path, newStep);
           }
 
           newStep = this.graph.getFirstNode(newStep);
-          // console.log('considering', path, newStep);
+          // console.log('considering', this.path, newStep);
         }
-        // check for loops in path
-        const pos = path.indexOf(newStep);
+        // check for loops in this.path
+        const pos = this.path.indexOf(newStep);
         if (pos !== -1) {
-          const loop = path.splice(pos).concat(newStep);
+          const loop = this.path.splice(pos).concat(newStep);
           const smallestWeight = this.netLoop(loop);
-          // this.printLine(`found loop `, path, loop);
+          // this.printLine(`found loop `, this.path, loop);
           numLoopsFound++;
           if (this.solutionFile) {
             await appendFile(
@@ -166,8 +167,8 @@ export class BirdsEyeWorm {
             );
           }
 
-          newStep = this.graph.getFirstNode(path[path.length - 1]);
-          // console.log(`Continuing with`, path, newStep);
+          newStep = this.graph.getFirstNode(this.path[this.path.length - 1]);
+          // console.log(`Continuing with`, this.path, newStep);
         }
       }
     } catch (e) {
