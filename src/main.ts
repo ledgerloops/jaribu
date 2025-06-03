@@ -1,18 +1,25 @@
 import { getDebtGraph, DebtGraph } from './readDebtFile.js';
-type Task = {
-  node: string;
-  command: string;
-  args: string[];
+
+type Probe = {
+  nodes: string[];
 };
+
+type Message = {
+  to: string;
+  command: string;
+  args: string[]
+};
+
+const CHUNK_SIZE = 1000 * 1000;
 
 class Jaribu {
   name: string;
-  sendTask: (t: Task) => void;
+  sendMessage: (m: Message) => void;
   outgoing: string[] = [];
   incoming: string[] = [];
-  constructor(name: string, sendTask: (t: Task) => void) {
+  constructor(name: string, sendMessage: (t: Message) => void) {
     this.name = name;
-    this.sendTask = sendTask;
+    this.sendMessage = sendMessage;
   }
   ensureIncoming(from: string): void {
     if (this.incoming.indexOf(from) === -1) {
@@ -30,10 +37,10 @@ class Jaribu {
     }
     // console.log('executing', command, args, this.outgoing.length);
     if (this.outgoing.length > 0) {
-      this.sendTask({
-        node: this.outgoing[0],
+      this.sendMessage({
+        to: this.outgoing[0],
         command: 'probe',
-        args: args.concat(this.name)
+        args: args.concat(this.outgoing[0])
       });
     }
   }
@@ -41,13 +48,40 @@ class Jaribu {
 
 class Network {
   debt: DebtGraph;
-  tasks: Task[] = [];
-  nodes: { [name: string]: Jaribu } = {}
+  probes: { [probeId: string]: Probe } = {};
+  nodes: { [name: string]: Jaribu } = {};
+  validateMessage(name: string, message: Message): void {
+    console.log(`Node ${name} sends ${message.command} message to ${message.to}`, message.args);
+    if ((message.command === 'probe')
+      && (message.args.length >= 4) // probeId, from, name, next
+      && (name === message.args[message.args.length - 2])
+      && (message.to === message.args[message.args.length - 1])) {
+      const probeId = message.args[0];
+      const newHops = message.args.slice(1);
+      if (newHops.length != this.probes[probeId].nodes.length + 1) {
+        throw new Error(`This probe message does not add exactly one hop to probe ${probeId}`);
+      }
+      for (let i = 0; i < this.probes[probeId].nodes.length; i++) {
+        if (this.probes[probeId].nodes[i] !== newHops[i]) {
+          throw new Error(`This probe message incorrectly copies hop ${i} from probe ${probeId}`);
+        }
+      }
+      if (this.probes[probeId].nodes[this.probes[probeId].nodes.length - 1] === name) {
+        this.probes[probeId] = { nodes: newHops };
+      }
+    }
+  }
+  handleMessage(name: string, message: Message): void {
+    void name;
+    // this.validateMessage(name, message);
+    const probeId = message.args[0];
+    const newHops = message.args.slice(1);
+    this.probes[probeId] = { nodes: newHops };
+  }
   ensureNode(name: string): void {
     if (typeof this.nodes[name] === 'undefined') {
-      this.nodes[name] = new Jaribu(name, (task: Task) => {
-        // console.log(`Adding task from ${name}`, task);
-        this.tasks.push(task);
+      this.nodes[name] = new Jaribu(name, (message: Message) => {
+        this.handleMessage(name, message);
       });
     }
   }
@@ -64,7 +98,7 @@ class Network {
           this.ensureLink(from, to);
           // for every link that enters a node that has at least one exit link,
           // create a probe task.
-          this.tasks.push({ node: to, command: 'probe', args: [ from, to ] });
+          this.probes[`${from}-${to}`] = { nodes: [ from, to ] };
         }
       });
     });
@@ -74,12 +108,15 @@ class Network {
     await this.createInitialTasks();
   }
   async runTasks(): Promise<void> {
-    for(let i = 0; i < this.tasks.length; i++) {
-      if (i % 100000 === 0) {
-        console.log(`Task ${i} of ${this.tasks.length}`);
-        await new Promise(resolve => setTimeout(resolve, 0));
+    while (Object.keys(this.probes).length > 0) {
+      for(let i = 0; i < Object.keys(this.probes).length && i < CHUNK_SIZE; i++) {
+        // console.log('doing task', i);
+        const probeId = Object.keys(this.probes)[i];
+        const nodes = this.probes[probeId].nodes;
+        this.nodes[nodes[nodes.length - 1]].execute('probe', [probeId].concat(nodes));
       }
-      this.nodes[this.tasks[i].node].execute(this.tasks[i].command, this.tasks[i].args);
+      console.log(`Another ${CHUNK_SIZE} tasks done of ${Object.keys(this.probes).length}`);
+      await new Promise(resolve => setTimeout(resolve, 0)); // I think this helps node obey Ctrl-C interrupts
     }
   }
 }
