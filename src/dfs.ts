@@ -14,7 +14,6 @@ let totalTransAmount = 0;
 let numTrans = 0;
 const birdsEyeWorm = new BirdsEyeWorm(true, SOLUTIONCSV);
 lineReader.on('line', function (line) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [ from, to, amountStr ] = line.split(' ');
   if (typeof linksCheck[from] === 'undefined') { linksCheck[from] = {}; }
   if (typeof linksCheck[from][to] === 'undefined') { linksCheck[from][to] = 0; }

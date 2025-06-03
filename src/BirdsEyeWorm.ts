@@ -104,7 +104,6 @@ export class BirdsEyeWorm {
 
     let counter = 0;
     try {
-      // eslint-disable-next-line no-constant-condition
       while (counter++ < MAX_NUM_STEPS) {
         // console.log('Step', path, newStep);
         path.push(newStep);
