@@ -153,7 +153,7 @@ export class BirdsEyeWorms {
         }
 
         if (path.length === 0) {
-          console.log('we are done here');
+          // console.log('we are done here');
           return counter;
         }
         newStep = this.graph.getFirstOutgoingNode(path[path.length - 1]);
@@ -187,7 +187,7 @@ export class BirdsEyeWorms {
           throw e;
         }
       }
-      console.log(`Starting worm in node ${startNode}`);
+      // console.log(`Starting worm in node ${startNode}`);
       counter += await this.runOneWorm(startNode);
     } while (counter < MAX_NUM_STEPS);
     console.log(longestLoop.join(' '), longestLoopAmount, longestLoop.length);

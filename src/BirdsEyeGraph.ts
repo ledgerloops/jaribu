@@ -104,7 +104,7 @@ export class Graph {
     if (names.length === 0) {
       throw new Error('Graph is empty');
     }
-    const index = Math.floor(Math.random() * names.length);
+    const index = 0; // Math.floor(Math.random() * names.length);
     return names[index];
   }
 

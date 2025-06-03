@@ -8,5 +8,6 @@ To test this algorithm on [the debt graph from Sarafu](https://raw.githubusercon
 ```
 pnpm install
 pnpm build
+pnpm prettier
 pnpm start
 ```
