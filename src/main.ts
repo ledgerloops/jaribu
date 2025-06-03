@@ -41,7 +41,12 @@ class Network {
   addHop(name: string, probeId: string): void {
     if (this.nodes[name].outgoing.length > 0) {
       // console.log('addHop', probeId, this.probes[probeId].nodes, this.nodes[name].outgoing[0]);
-      this.probes[probeId].nodes.push(this.nodes[name].outgoing[0]);
+      if (this.probes[probeId].nodes.indexOf(this.nodes[name].outgoing[0]) === -1) {  
+        this.probes[probeId].nodes.push(this.nodes[name].outgoing[0]);
+      } else {
+        this.probes[probeId].nodes.push(this.nodes[name].outgoing[0]);
+        console.log(`Loop found!`, this.probes[probeId].nodes);
+      }
     }
   }
   maybeAddHop(name: string, probeId: string): void {
@@ -49,7 +54,7 @@ class Network {
       this.nodes[name].currentProbe = probeId;
       this.addHop(name, probeId); 
     } else {
-      console.log(`Not adding hop (busy with ${this.nodes[name].currentProbe})`, probeId, this.probes[probeId].nodes, this.nodes[name].outgoing[0]);
+      // console.log(`Not adding hop (busy with ${this.nodes[name].currentProbe})`, probeId, this.probes[probeId].nodes, this.nodes[name].outgoing[0]);
     }
   }
   ensureNode(name: string): void {
