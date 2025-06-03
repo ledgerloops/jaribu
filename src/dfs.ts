@@ -1,6 +1,6 @@
 import { createInterface } from 'readline';
 import { createReadStream } from 'fs';
-import { BirdsEyeWorm } from './BirdsEyeWorm.js';
+import { BirdsEyeWorms } from './BirdsEyeWorm.js';
 
 const DEBTCSV = process.argv[2] || './debt.csv';
 const SOLUTIONCSV = process.argv[3] || './solution.csv';
@@ -12,7 +12,7 @@ const lineReader = createInterface({
 });
 let totalTransAmount = 0;
 let numTrans = 0;
-const birdsEyeWorm = new BirdsEyeWorm(true, SOLUTIONCSV);
+const birdsEyeWorm = new BirdsEyeWorms(true, SOLUTIONCSV);
 lineReader.on('line', function (line) {
   const [ from, to, amountStr ] = line.split(' ');
   if (typeof linksCheck[from] === 'undefined') { linksCheck[from] = {}; }
@@ -39,7 +39,7 @@ lineReader.on('close', async function () {
   }
 
   // throw new Error('links check OK!');
-  await birdsEyeWorm.runWorm();
+  await birdsEyeWorm.runWorms();
   Object.keys(birdsEyeWorm.stats).filter(loopLength => loopLength !== '2').forEach((loopLength: string) => {
     console.log(`Length ${loopLength}: found ${birdsEyeWorm.stats[loopLength].numFound} loops, average amount: around ${Math.round(birdsEyeWorm.stats[loopLength].totalAmount / birdsEyeWorm.stats[loopLength].numFound)}`);
   });

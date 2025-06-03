@@ -80,26 +80,23 @@ export class Graph {
       }
     }
   }
-  public getFirstNode(after?: string): string {
-    if ((typeof after !== 'string') && (typeof after !== 'undefined')) {
-      throw new Error(`after param ${JSON.stringify(after)} is neither a string nor undefined in call to getFirstNode`);
+  public getFirstOutgoingNode(from: string): string {
+    const outgoingLinks = this.links[from];
+    if (typeof outgoingLinks === 'undefined') {
+      throw new Error(`No outgoing links from node ${from}`);
     }
-
-    let nodes;
-    if (typeof after === 'string') {
-      const nodesObj = this.links[after];
-      if (typeof nodesObj === 'undefined') {
-        throw new Error(`No outgoing links from node ${after}`);
-      }
-      nodes = Object.keys(nodesObj);
-    } else {
-      nodes = Object.keys(this.links);
-      if (nodes.length === 0) {
-        throw new Error('Graph is empty');
-      }
-    }
+    const nodes = Object.keys(outgoingLinks);
     return nodes[0];
   }
+  public pickRandomNode(): string {
+    const names = Object.keys(this.links);
+    if (names.length === 0) {
+      throw new Error('Graph is empty');
+    }
+    const index = Math.floor(Math.random() * names.length);
+    return names[index];
+  }
+
   public hasOutgoingLinks(after: string): boolean {
     if (typeof after !== 'string') {
       throw new Error(`after param ${JSON.stringify(after)} is not a string in call to hasOutgoingLinks`);
