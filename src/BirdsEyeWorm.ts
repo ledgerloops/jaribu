@@ -1,36 +1,43 @@
-import { EventEmitter } from 'node:events';
 import { Graph } from './BirdsEyeGraph.js';
-import { appendFile } from 'node:fs/promises';
+import { writeFile, appendFile } from 'node:fs/promises';
 
 const MAX_NUM_STEPS = 1000000;
+let longestLoop = [];
+let longestLoopAmount = 0;
 
-export class Worm extends EventEmitter {
-  graph: Graph;
+export function printLine(preface: string, first: string[], second: string[]): void {
+  const firstStr = first.length > 0 ? `[ ${first.map(x => `'${x}'`).join(', ')} ]` : `[]`;
+  const secondStr = second.length > 0 ? `[ ${second.map(x => `'${x}'`).join(', ')} ]` : `[]`;
+  console.log(`${preface} ${firstStr} ${secondStr}`);
+}
+
+export class BirdsEyeWorm {
+  graph: Graph = new Graph();
   stats: {
     [loopLength: number]: {
       numFound: number;
       totalAmount: number;
-    };
+    }
   } = {};
-  path: string[];
-  counter: number = 0;
-  fromNode: string;
+  private probingReport: boolean;
   private solutionFile: string;
-  constructor(fromNode: string, graph: Graph, solutionFile: string) {
-    super();
-    this.graph = graph;
-    this.fromNode = fromNode;
+  constructor(probingReport: boolean, solutionFile?: string) {
+    this.probingReport = probingReport;
     this.solutionFile = solutionFile;
   }
-
+  printLine(preface: string, first: string[], second: string[]): void {
+    if (this.probingReport) {
+      printLine(preface, first, second);
+    }
+  }
   report(loopLength: number, amount: number): void {
     // if (loopLength > 2) {
-    // console.log('report', loopLength, amount);
+      // console.log('report', loopLength, amount);
     // }
     if (typeof this.stats[loopLength] === 'undefined') {
       this.stats[loopLength] = {
         numFound: 0,
-        totalAmount: 0,
+        totalAmount: 0
       };
     }
     this.stats[loopLength].numFound++;
@@ -40,7 +47,7 @@ export class Worm extends EventEmitter {
     const amountNetted = this.graph.addWeight(from, to, amount);
     if (amountNetted > 0) {
       // console.log(from, to, amount, amountNetted);
-      // this.report(2, amountNetted);
+      this.report(2, amountNetted);
     }
     return amountNetted;
   }
@@ -48,7 +55,7 @@ export class Worm extends EventEmitter {
   getSmallestWeight(loop: string[]): number {
     let smallestWeight = Infinity;
     for (let k = 0; k < loop.length - 1; k++) {
-      const thisWeight = this.graph.getWeight(loop[k], loop[k + 1]);
+      const thisWeight = this.graph.getWeight(loop[k], loop[k+1]);
       // console.log(`Weight on loop from ${loop[k]} to ${loop[k+1]} is ${thisWeight}`);
       if (thisWeight < smallestWeight) {
         smallestWeight = thisWeight;
@@ -65,83 +72,99 @@ export class Worm extends EventEmitter {
     }
     let firstZeroPos;
     for (let k = 0; k < loop.length - 1; k++) {
-      if (
-        this.graph.getWeight(loop[k], loop[k + 1]) === smallestWeight &&
-        typeof firstZeroPos === 'undefined'
-      ) {
+      if ((this.graph.getWeight(loop[k], loop[k+1]) === smallestWeight) && (typeof firstZeroPos === 'undefined')) {
         firstZeroPos = k;
       }
-      this.addTransfer(loop[k + 1], loop[k], smallestWeight);
+      this.addTransfer(loop[k+1], loop[k], smallestWeight);
     }
     // const after = this.graph.getTotalWeight();
     // console.log('total graph weight reduced by', before - after);
     if (loop.length - 1 === 2) {
       console.log('reporting on loop', loop);
     }
-    // this.report(loop.length - 1, smallestWeight);
+    this.report(loop.length - 1, smallestWeight);
+    if (loop.length > longestLoop.length) {
+      longestLoop = loop;
+      longestLoopAmount = smallestWeight;
+    }
     return smallestWeight;
   }
-  async work(): Promise<void> {
-    const path = [];
-    let newStep = this.graph.getFirstOutgoingNode(this.fromNode);
-    while (this.counter++ < MAX_NUM_STEPS) {
-      // console.log('Step', path, newStep);
-      path.push(newStep);
-      // console.log('picking first option from', newStep);
-      // console.log(path);
-      const backtracked = [];
-      while (
-        path.length > 0 &&
-        !this.graph.hasOutgoingLinks(path[path.length - 1])
-      ) {
-        // console.log('no outgoing links', path);
-        // backtrack
-        const previousStep = path.pop();
-        backtracked.push(previousStep);
-        if (path.length > 0) {
-          this.graph.removeLink(path[path.length - 1], previousStep);
+  // removes dead ends as it finds them.
+  // nets loops as it finds them.
+  async runWorm(): Promise<void> {
+    let path = [];
+    let numLoopsFound = 0;
+    const progressPrinter = setInterval(() => {
+      console.log(`Found ${numLoopsFound} loops so far`);
+    }, 1000);
+    let newStep = this.graph.getFirstNode();
+    if (this.solutionFile) {
+      await writeFile(this.solutionFile, '');
+    }
+
+    let counter = 0;
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (counter++ < MAX_NUM_STEPS) {
+        // console.log('Step', path, newStep);
+        path.push(newStep);
+        // console.log('picking first option from', newStep);
+        // console.log(path);
+        const backtracked = [];
+        while (path.length > 0 && !this.graph.hasOutgoingLinks(path[path.length - 1])) {
+          // console.log('no outgoing links', path);
+          // backtrack
+          const previousStep = path.pop();
+          backtracked.push(previousStep);
+          if (path.length > 0) {
+            this.graph.removeLink(path[path.length - 1], previousStep);
+          }
+        }
+        // we now now that either newStep has outgoing links, or path is empty
+        if (path.length === 0) {
+          if (backtracked.length > 0) {
+            // this.printLine('finished   ', path, backtracked.reverse());
+          }
+          // no paths left, start with a new worm
+          path = [];
+          newStep = this.graph.getFirstNode();
+        } else {
+          if (backtracked.length > 0) {
+            // this.printLine('backtracked', path, backtracked.reverse());
+            newStep = path[path.length - 1];
+            // console.log('continuing from', path, newStep);
+          }
+
+          newStep = this.graph.getFirstNode(newStep);
+          // console.log('considering', path, newStep); 
+        }
+        // check for loops in path
+        const pos = path.indexOf(newStep);
+        if (pos !== -1) {
+          const loop = path.splice(pos).concat(newStep);
+          const smallestWeight = this.netLoop(loop);
+          // this.printLine(`found loop `, path, loop);
+          numLoopsFound++;
+          if (this.solutionFile) {
+            await appendFile(this.solutionFile, loop.slice(0, loop.length - 1).concat(smallestWeight).join(' ') + '\n');
+          }
+
+          newStep = this.graph.getFirstNode(path[path.length - 1]);
+          // console.log(`Continuing with`, path, newStep);
         }
       }
-      // we now know that either newStep has outgoing links, or path is empty
-      if (path.length === 0) {
-        if (backtracked.length > 0) {
-          // this.printLine('finished   ', path, backtracked.reverse());
-        }
-        // no paths left, return
+    } catch (e) {
+      if (e.message === 'Graph is empty') {
+        // We're done!
+        console.log(`Done after ${counter} steps`);
+        clearInterval(progressPrinter);
+        console.log(longestLoop.join(' '), longestLoopAmount, longestLoop.length);
         return;
       } else {
-        if (backtracked.length > 0) {
-          // this.printLine('backtracked', path, backtracked.reverse());
-          newStep = path[path.length - 1];
-          // console.log('continuing from', path, newStep);
-        }
-        newStep = this.graph.getFirstOutgoingNode(newStep);
-        // console.log('considering', path, newStep);
-      }
-      // check for loops in path
-      const pos = path.indexOf(newStep);
-      if (pos !== -1) {
-        const loop = path.splice(pos).concat(newStep);
-        const smallestWeight = this.netLoop(loop);
-        // this.printLine(`found loop `, path, loop);
-        if (this.solutionFile) {
-          await appendFile(
-            this.solutionFile,
-            loop
-              .slice(0, loop.length - 1)
-              .concat(smallestWeight)
-              .join(' ') + '\n',
-          );
-        }
-
-        if (path.length === 0) {
-          // console.log('we are done here');
-          return;
-        }
-        newStep = this.graph.getFirstOutgoingNode(path[path.length - 1]);
-        // console.log(`Continuing with`, path, newStep);
+        throw e;
       }
     }
-    return;
+    clearInterval(progressPrinter);
+    console.log(longestLoop.join(' '), longestLoopAmount, longestLoop.length);
   }
 }
