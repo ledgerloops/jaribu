@@ -4,7 +4,7 @@ export class Graph {
   private links: {
     [from: string]: {
       [to: string]: bigint;
-    }
+    };
   } = {};
   private ensureLink(from: string, to: string): void {
     if (typeof this.links[from] === 'undefined') {
@@ -43,22 +43,29 @@ export class Graph {
       return this.substractAndRemoveCounterBalance(from, to);
     } else if (this.links[from][to] < this.links[to][from]) {
       return this.substractAndRemoveCounterBalance(to, from);
-    } else { // mutual annihilation
+    } else {
+      // mutual annihilation
       this.zeroOut(from, to);
       return this.zeroOut(to, from);
     }
   }
   public addWeight(from: string, to: string, weight: number): number {
     if (typeof from !== 'string') {
-      throw new Error(`from param ${JSON.stringify(from)} is not a string in call to addWeight`);
+      throw new Error(
+        `from param ${JSON.stringify(from)} is not a string in call to addWeight`,
+      );
     }
     if (typeof to !== 'string') {
-      throw new Error(`to param ${JSON.stringify(to)} is not a string in call to addWeight`);
+      throw new Error(
+        `to param ${JSON.stringify(to)} is not a string in call to addWeight`,
+      );
     }
     if (typeof weight !== 'number') {
-      throw new Error(`weight param ${JSON.stringify(weight)} is not a number in call to addWeight`);
+      throw new Error(
+        `weight param ${JSON.stringify(weight)} is not a number in call to addWeight`,
+      );
     }
- 
+
     if (weight <= 0) {
       throw new Error('weight should be greater than zero');
     }
@@ -68,10 +75,14 @@ export class Graph {
   }
   public removeLink(from: string, to: string): void {
     if (typeof from !== 'string') {
-      throw new Error(`from param ${JSON.stringify(from)} is not a string in call to removeLink`);
+      throw new Error(
+        `from param ${JSON.stringify(from)} is not a string in call to removeLink`,
+      );
     }
     if (typeof to !== 'string') {
-      throw new Error(`to param ${JSON.stringify(to)} is not a string in call to removeLink`);
+      throw new Error(
+        `to param ${JSON.stringify(to)} is not a string in call to removeLink`,
+      );
     }
 
     if (typeof this.links[from] !== 'undefined') {
@@ -81,8 +92,10 @@ export class Graph {
     }
   }
   public getFirstNode(after?: string): string {
-    if ((typeof after !== 'string') && (typeof after !== 'undefined')) {
-      throw new Error(`after param ${JSON.stringify(after)} is neither a string nor undefined in call to getFirstNode`);
+    if (typeof after !== 'string' && typeof after !== 'undefined') {
+      throw new Error(
+        `after param ${JSON.stringify(after)} is neither a string nor undefined in call to getFirstNode`,
+      );
     }
 
     let nodes;
@@ -102,16 +115,22 @@ export class Graph {
   }
   public hasOutgoingLinks(after: string): boolean {
     if (typeof after !== 'string') {
-      throw new Error(`after param ${JSON.stringify(after)} is not a string in call to hasOutgoingLinks`);
+      throw new Error(
+        `after param ${JSON.stringify(after)} is not a string in call to hasOutgoingLinks`,
+      );
     }
-    return (typeof this.links[after] !== 'undefined');
+    return typeof this.links[after] !== 'undefined';
   }
   public getWeight(from: string, to: string): number {
     if (typeof from !== 'string') {
-      throw new Error(`from param ${JSON.stringify(from)} is not a string in call to getWeight`);
+      throw new Error(
+        `from param ${JSON.stringify(from)} is not a string in call to getWeight`,
+      );
     }
     if (typeof to !== 'string') {
-      throw new Error(`to param ${JSON.stringify(to)} is not a string in call to getWeight`);
+      throw new Error(
+        `to param ${JSON.stringify(to)} is not a string in call to getWeight`,
+      );
     }
     if (typeof this.links[from] === 'undefined') {
       return 0;
@@ -124,14 +143,14 @@ export class Graph {
   public getLinks(): {
     [from: string]: {
       [to: string]: bigint;
-    }
+    };
   } {
     return this.links;
   }
   public getTotalWeight(): bigint {
     let total = 0n;
-    Object.keys(this.links).forEach(from => {
-      Object.keys(this.links[from]).forEach(to => {
+    Object.keys(this.links).forEach((from) => {
+      Object.keys(this.links[from]).forEach((to) => {
         total += this.links[from][to];
       });
     });
