@@ -3,7 +3,7 @@ import { Graph } from './BirdsEyeGraph.js';
 import { writeFile, appendFile } from 'node:fs/promises';
 
 const MAX_NUM_STEPS = 1000000;
-const NUM_RUNNERS = 1;
+const NUM_RUNNERS = 2;
 let longestLoop = [];
 let longestLoopAmount = 0;
 
@@ -152,7 +152,7 @@ export class BirdsEyeWorm {
   async work1(probeId: string): Promise<boolean> {
     // check this before calling pushPath
     if(this.hitsAnotherWorm(probeId, this.newStep[probeId])) {
-      console.log('killing at the start of work1', this.currentProbe, this.newStep, probeId);
+      // console.log('killing at the start of work1', this.currentProbe, this.newStep, probeId);
       this.killWorm(probeId);
       return true;
     }
@@ -189,7 +189,7 @@ export class BirdsEyeWorm {
       }
       //check this before calling getNewStep
       if(this.hitsAnotherWorm(probeId, this.graph.getFirstNode(this.newStep[probeId]))) {
-        console.log('killing halfway work1', this.currentProbe, this.newStep, probeId);
+        // console.log('killing halfway work1', this.currentProbe, this.newStep, probeId);
         this.killWorm(probeId);
         return true;
       }
@@ -221,9 +221,9 @@ export class BirdsEyeWorm {
         this.killWorm(probeId);
         return true;
       }
-      if (!this.graph.hasOutgoingLinks(this.path[probeId][this.path[probeId].length - 1])) {
-        console.log('Uh-oh, this is going to crash', this.currentProbe, this.path, this.newStep, probeId, pos);
-      }
+      // if (!this.graph.hasOutgoingLinks(this.path[probeId][this.path[probeId].length - 1])) {
+      //   console.log('Uh-oh, this is going to crash', this.currentProbe, this.path, this.newStep, probeId, pos);
+      // }
       this.newStep[probeId] = this.getNewStep(probeId);
       // console.log(`Continuing with`, this.path[probeId], this.newStep[probeId]);
     }
