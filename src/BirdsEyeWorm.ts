@@ -147,6 +147,7 @@ export class BirdsEyeWorm {
     this.splicePath(probeId, 0);
     delete this.path[probeId];
     delete this.newStep[probeId];
+    // console.log('worm should be gone now', this.currentProbe, this.path, this.newStep, probeId);
   }
   async work1(probeId: string): Promise<boolean> {
     // check this before calling pushPath
@@ -178,6 +179,7 @@ export class BirdsEyeWorm {
         // this.printLine('finished   ', this.path[probeId], backtracked.reverse());
       }
       // no this.path[probeId]s left, start with a new worm
+      this.killWorm(probeId);
       return true;
     } else {
       if (backtracked.length > 0) {
@@ -196,10 +198,11 @@ export class BirdsEyeWorm {
     }
     return false;
   }
-  async work2(probeId: string): Promise<void> {
+  async work2(probeId: string): Promise<boolean> {
     // check for loops in this.path[probeId]
     const pos = this.path[probeId].indexOf(this.newStep[probeId]);
     if (pos !== -1) {
+      // console.log('Splicing off loop', this.currentProbe, this.path, probeId, pos);
       const loop = this.splicePath(probeId, pos).concat(this.newStep[probeId]);
       const smallestWeight = this.netLoop(loop);
       // this.printLine(`found loop `, this.path[probeId], loop);
@@ -213,9 +216,18 @@ export class BirdsEyeWorm {
             .join(' ') + '\n',
         );
       }
+      if (this.path[probeId].length === 0) {
+        // console.log('Uh-oh, how can we continue from an empty path? Killing this worm in work2', this.currentProbe, this.path, this.newStep, probeId, pos);
+        this.killWorm(probeId);
+        return true;
+      }
+      if (!this.graph.hasOutgoingLinks(this.path[probeId][this.path[probeId].length - 1])) {
+        console.log('Uh-oh, this is going to crash', this.currentProbe, this.path, this.newStep, probeId, pos);
+      }
       this.newStep[probeId] = this.getNewStep(probeId);
       // console.log(`Continuing with`, this.path[probeId], this.newStep[probeId]);
     }
+    return false;
   }
   newProbeId(): string {
     return randomBytes(8).toString("hex");
@@ -250,16 +262,22 @@ export class BirdsEyeWorm {
     try {
       while (counter++ < MAX_NUM_STEPS) {
         for (let runner = 0; runner < NUM_RUNNERS; runner++) {
-          const done = await this.work1(probeIds[runner]);
-          if (done) {
-            console.log('done with', probeIds[runner]);
+          const done1 = await this.work1(probeIds[runner]);
+          if (done1) {
+            // console.log('done1 with', probeIds[runner]);
             probeIds[runner] = this.newProbeId();
             this.path[probeIds[runner]] = [];
             this.newStep[probeIds[runner]] = this.getBoredNodeWithOutgoingLinks();
           }
         }
         for (let runner = 0; runner < NUM_RUNNERS; runner++) {
-          await this.work2(probeIds[runner]);
+          const done2 = await this.work2(probeIds[runner]);
+          if (done2) {
+            // console.log('done2 with', probeIds[runner]);
+            probeIds[runner] = this.newProbeId();
+            this.path[probeIds[runner]] = [];
+            this.newStep[probeIds[runner]] = this.getBoredNodeWithOutgoingLinks();
+          }
         }
       }
     } catch (e) {
