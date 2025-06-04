@@ -197,26 +197,33 @@ export class BirdsEyeWorm {
   // removes dead ends as it finds them.
   // nets loops as it finds them.
   async runWorms(): Promise<void> {
-    const probeId =  'the-worm';
-    this.path[probeId] = [];
     this.numLoopsFound = 0;
     const progressPrinter = setInterval(() => {
       console.log(`Found ${this.numLoopsFound} loops so far`);
     }, 1000);
-    this.newStep[probeId] = this.graph.getFirstNode(); // TODO: randomize this
     if (this.solutionFile) {
       await writeFile(this.solutionFile, '');
     }
-
     let counter = 0;
+
+    const probeIds =  ['the-worm'];
+    probeIds.forEach(probeId => {
+      this.path[probeId] = [];
+      this.newStep[probeId] = this.graph.getFirstNode(); // TODO: randomize this
+    });
+
     try {
       while (counter++ < MAX_NUM_STEPS) {
-        const done = await this.work1(probeId);
-        if (done) {
-          this.path[probeId] = [];
-          this.newStep[probeId] = this.graph.getFirstNode(); // TODO: break out of the loop here
-        }
-        await this.work2(probeId);
+        await Promise.all(probeIds.map(async (probeId) => {
+          const done = await this.work1(probeId);
+          if (done) {
+            this.path[probeId] = [];
+            this.newStep[probeId] = this.graph.getFirstNode(); // TODO: break out of the loop here
+          }
+        }));
+        await Promise.all(probeIds.map(async (probeId) => {
+          await this.work2(probeId);
+        }));
       }
     } catch (e) {
       if (e.message === 'Graph is empty') {
