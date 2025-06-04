@@ -205,6 +205,7 @@ export class BirdsEyeWorm {
     this.numLoopsFound = 0;
     const progressPrinter = setInterval(() => {
       console.log(`Found ${this.numLoopsFound} loops so far`);
+      console.log(this.path, this.newStep);
     }, 1000);
     if (this.solutionFile) {
       await writeFile(this.solutionFile, '');
@@ -223,6 +224,9 @@ export class BirdsEyeWorm {
         for (let runner = 0; runner < NUM_RUNNERS; runner++) {
           const done = await this.work1(probeIds[runner]);
           if (done) {
+            delete this.path[probeIds[runner]];
+            delete this.newStep[probeIds[runner]];
+            probeIds[runner] = this.newProbeId();
             this.path[probeIds[runner]] = [];
             this.newStep[probeIds[runner]] = this.graph.getFirstNode(); // TODO: break out of the loop here
           }
