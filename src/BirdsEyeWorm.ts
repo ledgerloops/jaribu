@@ -220,10 +220,10 @@ export class BirdsEyeWorm {
   newProbeId(): string {
     return randomBytes(8).toString("hex");
   }
-  getBoredNode(): string {
+  getBoredNodeWithOutgoingLinks(): string {
     const nodeNames = this.graph.getNodeNames();
     // return nodeNames[0];
-    const boredNodes = nodeNames.filter(nodeName => typeof this.currentProbe[nodeName] === 'undefined');
+    const boredNodes = nodeNames.filter(nodeName => (typeof this.currentProbe[nodeName] === 'undefined') && (this.graph.hasOutgoingLinks(nodeName)));
     const randomIndex = Math.floor(Math.random() * boredNodes.length);
     return boredNodes[randomIndex];
   }
@@ -244,7 +244,7 @@ export class BirdsEyeWorm {
     for (let runner = 0; runner < NUM_RUNNERS; runner++) {
       probeIds[runner] = this.newProbeId();
       this.path[probeIds[runner]] = [];
-      this.newStep[probeIds[runner]] = this.getBoredNode();
+      this.newStep[probeIds[runner]] = this.getBoredNodeWithOutgoingLinks();
     }
 
     try {
@@ -255,7 +255,7 @@ export class BirdsEyeWorm {
             console.log('done with', probeIds[runner]);
             probeIds[runner] = this.newProbeId();
             this.path[probeIds[runner]] = [];
-            this.newStep[probeIds[runner]] = this.getBoredNode();
+            this.newStep[probeIds[runner]] = this.getBoredNodeWithOutgoingLinks();
           }
         }
         for (let runner = 0; runner < NUM_RUNNERS; runner++) {
