@@ -24,7 +24,7 @@
     "vitest": "^3.0.8"
   },
   "scripts": {
-    "start": "node build/src/dfs.js",
+    "start": "NODE_OPTIONS=--enable-source-maps node build/src/dfs.js",
     "clean": "rimraf coverage build tmp",
     "prebuild": "npm run lint",
     "build": "tsc -p tsconfig.json",

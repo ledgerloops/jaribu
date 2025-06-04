@@ -44,7 +44,7 @@ export class BirdsEyeWorm {
   }
   report(loopLength: number, amount: number): void {
     // if (loopLength > 2) {
-    // console.log('report', loopLength, amount);
+    //   console.log('report', loopLength, amount);
     // }
     if (typeof this.stats[loopLength] === 'undefined') {
       this.stats[loopLength] = {
@@ -113,7 +113,7 @@ export class BirdsEyeWorm {
     return popped;
   }
   pushPath(probeId: string, node: string): void {
-    if (typeof this.currentProbe[node] !== 'undefined') {
+    if (this.hitsAnotherWorm(probeId, node)) {
       throw new Error(`Attempt to push node ${node} onto path ${probeId} but it is busy with ${this.currentProbe[node]}`);
     }
     this.path[probeId].push(node);
@@ -129,17 +129,32 @@ export class BirdsEyeWorm {
     });
     return spliced;
   }
+  hitsAnotherWorm(probeId: string, newStep: string): boolean {
+    return (typeof this.currentProbe[newStep] !== 'undefined') && (this.currentProbe[newStep] !== probeId);
+  }
   getNewStep(probeId: string, after?: string): string {
     if (typeof after === 'undefined') {
       after = this.path[probeId][this.path[probeId].length - 1];
     }
     const newStep = this.graph.getFirstNode(after);
-    if((typeof this.currentProbe[newStep] !== 'undefined') && (this.currentProbe[newStep] !== probeId)){
+    if(this.hitsAnotherWorm(probeId, newStep)) {
       throw new Error('killing this worm as it hits another one');
     }
+    // console.log('new step', probeId, after, newStep);
     return newStep;
   }
+  killWorm(probeId: string): void {
+    this.splicePath(probeId, 0);
+    delete this.path[probeId];
+    delete this.newStep[probeId];
+  }
   async work1(probeId: string): Promise<boolean> {
+    // check this before calling pushPath
+    if(this.hitsAnotherWorm(probeId, this.newStep[probeId])) {
+      console.log('killing at the start of work1', this.currentProbe, this.newStep, probeId);
+      this.killWorm(probeId);
+      return true;
+    }
     // console.log('Step', this.path[probeId], this.newStep[probeId]);
     this.pushPath(probeId, this.newStep[probeId]);
     // console.log('picking first option from', this.newStep[probeId]);
@@ -170,6 +185,12 @@ export class BirdsEyeWorm {
         this.newStep[probeId] = this.path[probeId][this.path[probeId].length - 1];
         // console.log('continuing from', this.path[probeId], this.newStep[probeId]);
       }
+      //check this before calling getNewStep
+      if(this.hitsAnotherWorm(probeId, this.graph.getFirstNode(this.newStep[probeId]))) {
+        console.log('killing halfway work1', this.currentProbe, this.newStep, probeId);
+        this.killWorm(probeId);
+        return true;
+      }
       this.newStep[probeId] = this.getNewStep(probeId, this.newStep[probeId]);
       // console.log('considering', this.path[probeId], this.newStep[probeId]);
     }
@@ -199,13 +220,20 @@ export class BirdsEyeWorm {
   newProbeId(): string {
     return randomBytes(8).toString("hex");
   }
+  getBoredNode(): string {
+    const nodeNames = this.graph.getNodeNames();
+    // return nodeNames[0];
+    const boredNodes = nodeNames.filter(nodeName => typeof this.currentProbe[nodeName] === 'undefined');
+    const randomIndex = Math.floor(Math.random() * boredNodes.length);
+    return boredNodes[randomIndex];
+  }
   // removes dead ends as it finds them.
   // nets loops as it finds them.
   async runWorms(): Promise<void> {
     this.numLoopsFound = 0;
     const progressPrinter = setInterval(() => {
       console.log(`Found ${this.numLoopsFound} loops so far`);
-      console.log(this.path, this.newStep);
+      // console.log(this.path, this.newStep);
     }, 1000);
     if (this.solutionFile) {
       await writeFile(this.solutionFile, '');
@@ -216,7 +244,7 @@ export class BirdsEyeWorm {
     for (let runner = 0; runner < NUM_RUNNERS; runner++) {
       probeIds[runner] = this.newProbeId();
       this.path[probeIds[runner]] = [];
-      this.newStep[probeIds[runner]] = this.graph.getFirstNode(); // TODO: randomize this
+      this.newStep[probeIds[runner]] = this.getBoredNode();
     }
 
     try {
@@ -224,11 +252,10 @@ export class BirdsEyeWorm {
         for (let runner = 0; runner < NUM_RUNNERS; runner++) {
           const done = await this.work1(probeIds[runner]);
           if (done) {
-            delete this.path[probeIds[runner]];
-            delete this.newStep[probeIds[runner]];
+            console.log('done with', probeIds[runner]);
             probeIds[runner] = this.newProbeId();
             this.path[probeIds[runner]] = [];
-            this.newStep[probeIds[runner]] = this.graph.getFirstNode(); // TODO: break out of the loop here
+            this.newStep[probeIds[runner]] = this.getBoredNode();
           }
         }
         for (let runner = 0; runner < NUM_RUNNERS; runner++) {

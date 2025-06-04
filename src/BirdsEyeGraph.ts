@@ -91,27 +91,13 @@ export class Graph {
       }
     }
   }
-  public getFirstNode(after?: string): string {
-    if (typeof after !== 'string' && typeof after !== 'undefined') {
-      throw new Error(
-        `after param ${JSON.stringify(after)} is neither a string nor undefined in call to getFirstNode`,
-      );
+  public getFirstNode(after: string): string {
+    const outgoingWeights = this.links[after];
+    if (typeof outgoingWeights === 'undefined') {
+      throw new Error(`No outgoing links from node ${after}`);
     }
-
-    let nodes;
-    if (typeof after === 'string') {
-      const nodesObj = this.links[after];
-      if (typeof nodesObj === 'undefined') {
-        throw new Error(`No outgoing links from node ${after}`);
-      }
-      nodes = Object.keys(nodesObj);
-    } else {
-      nodes = Object.keys(this.links);
-      if (nodes.length === 0) {
-        throw new Error('Graph is empty');
-      }
-    }
-    return nodes[0];
+    const outgoingNeighbourNames = Object.keys(outgoingWeights);
+    return outgoingNeighbourNames[0];
   }
   public hasOutgoingLinks(after: string): boolean {
     if (typeof after !== 'string') {
@@ -146,6 +132,9 @@ export class Graph {
     };
   } {
     return this.links;
+  }
+  public getNodeNames(): string[] {
+    return Object.keys(this.links);
   }
   public getTotalWeight(): bigint {
     let total = 0n;
