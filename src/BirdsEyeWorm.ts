@@ -127,6 +127,16 @@ export class BirdsEyeWorm {
     });
     return spliced;
   }
+  getNewStep(probeId: string, after?: string): string {
+    if (typeof after === 'undefined') {
+      after = this.path[this.path.length - 1];
+    }
+    const newStep = this.graph.getFirstNode(after);
+    if((typeof this.currentProbe[newStep] !== 'undefined') && (this.currentProbe[newStep] !== probeId)){
+      throw new Error('killing this worm as it hits another one');
+    }
+    return newStep;
+  }
   async work(probeId: string): Promise<void> {
     // console.log('Step', this.path, this.newStep);
     this.pushPath(probeId, this.newStep);
@@ -152,14 +162,14 @@ export class BirdsEyeWorm {
       }
       // no this.paths left, start with a new worm
       this.path = [];
-      this.newStep = this.graph.getFirstNode();
+      this.newStep = this.graph.getFirstNode(); // TODO: break out of the loop here
     } else {
       if (backtracked.length > 0) {
         // this.printLine('backtracked', this.path, backtracked.reverse());
         this.newStep = this.path[this.path.length - 1];
         // console.log('continuing from', this.path, this.newStep);
       }
-      this.newStep = this.graph.getFirstNode(this.newStep);
+      this.newStep = this.getNewStep(probeId, this.newStep);
       // console.log('considering', this.path, this.newStep);
     }
     // check for loops in this.path
@@ -178,7 +188,7 @@ export class BirdsEyeWorm {
             .join(' ') + '\n',
         );
       }
-      this.newStep = this.graph.getFirstNode(this.path[this.path.length - 1]);
+      this.newStep = this.getNewStep(probeId);
       // console.log(`Continuing with`, this.path, this.newStep);
     }
   }
@@ -190,7 +200,7 @@ export class BirdsEyeWorm {
     const progressPrinter = setInterval(() => {
       console.log(`Found ${this.numLoopsFound} loops so far`);
     }, 1000);
-    this.newStep = this.graph.getFirstNode();
+    this.newStep = this.graph.getFirstNode(); // TODO: randomize this
     if (this.solutionFile) {
       await writeFile(this.solutionFile, '');
     }
