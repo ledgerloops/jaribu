@@ -91,13 +91,16 @@ export class Graph {
       }
     }
   }
-  public getFirstNode(after: string): string {
+  public getOutgoingNeighbourNames(after: string): string[] {
     const outgoingWeights = this.links[after];
     if (typeof outgoingWeights === 'undefined') {
       throw new Error(`No outgoing links from node ${after}`);
     }
     const outgoingNeighbourNames = Object.keys(outgoingWeights);
-    return outgoingNeighbourNames[0];
+    return outgoingNeighbourNames;
+  }
+  public getFirstNode(after: string): string {
+    return this.getOutgoingNeighbourNames(after)[0];
   }
   public hasOutgoingLinks(after: string): boolean {
     if (typeof after !== 'string') {

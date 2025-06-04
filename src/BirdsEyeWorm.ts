@@ -32,7 +32,8 @@ export class BirdsEyeWorm {
   private probeIds: string [] = [];
   private path: { [probeId: string]: string[] } = {};
   private newStep:  { [probeId: string]: string } = {};
-  private numLoopsFound: number;
+  private numLoopsFound: number = 0;
+  private numLinksRemoved: number = 0;
   private probingReport: boolean;
   private solutionFile: string;
   private currentProbe: { [node: string]: string } = {};
@@ -152,6 +153,11 @@ export class BirdsEyeWorm {
     delete this.newStep[probeId];
     // console.log('worm should be gone now', this.currentProbe, this.path, this.newStep, probeId);
   }
+  hasIdleOutgoingLinks(probeId: string, name: string): boolean {
+    const outgoingNeighbourNames = this.graph.getOutgoingNeighbourNames(name);
+    const idleOutgoingNeighbourNames = outgoingNeighbourNames.filter(name => !this.hitsAnotherWorm(probeId, name));
+    return idleOutgoingNeighbourNames.length > 0;
+  }
   async work1(probeId: string): Promise<boolean> {
     // check this before calling pushPath
     if(this.hitsAnotherWorm(probeId, this.newStep[probeId])) {
@@ -173,6 +179,7 @@ export class BirdsEyeWorm {
       const previousStep = this.popPath(probeId);
       backtracked.push(previousStep);
       if (this.path[probeId].length > 0) {
+        this.numLinksRemoved++;
         this.graph.removeLink(this.path[probeId][this.path[probeId].length - 1], previousStep);
       }
     }
@@ -253,12 +260,11 @@ export class BirdsEyeWorm {
   // removes dead ends as it finds them.
   // nets loops as it finds them.
   async runWorms(): Promise<void> {
-    this.numLoopsFound = 0;
     let timer = 0;
     const progressPrinter = setInterval(() => {
-      console.log(`Found ${this.numLoopsFound} loops so far (now running ${this.probeIds.filter(x => x !== undefined).length} worms)`);
+      console.log(`Found ${this.numLoopsFound} loops and removed ${this.numLinksRemoved} links in ${++timer} seconds (now running ${this.probeIds.filter(x => x !== undefined).length} worms)`);
       // console.log(this.probeIds, this.path, this.newStep);
-      if (++timer === 4) {
+      if (timer === 90) {
         process.exit();
       }
     }, 1000);
