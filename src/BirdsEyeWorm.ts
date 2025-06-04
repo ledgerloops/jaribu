@@ -3,7 +3,8 @@ import { Graph } from './BirdsEyeGraph.js';
 import { writeFile, appendFile } from 'node:fs/promises';
 
 const MAX_NUM_STEPS = 1000000;
-const NUM_RUNNERS = 2;
+const MAX_NUM_RUNNERS = 100;
+const WORM_START_INTERVAL = 100;
 let longestLoop = [];
 let longestLoopAmount = 0;
 
@@ -27,6 +28,7 @@ export class BirdsEyeWorm {
       totalAmount: number;
     };
   } = {};
+  private probeIds: string [] = [];
   private path: { [probeId: string]: string[] } = {};
   private newStep:  { [probeId: string]: string } = {};
   private numLoopsFound: number;
@@ -239,44 +241,60 @@ export class BirdsEyeWorm {
     const randomIndex = Math.floor(Math.random() * boredNodes.length);
     return boredNodes[randomIndex];
   }
+  findEmptyRunner(): number {
+    for (let runner = 0; runner < MAX_NUM_RUNNERS; runner++) {
+      if (this.probeIds[runner] === undefined) {
+        return runner;
+      }
+    }
+    throw new Error('MAX_NUM_RUNNERS reached!');
+  }
   // removes dead ends as it finds them.
   // nets loops as it finds them.
   async runWorms(): Promise<void> {
     this.numLoopsFound = 0;
     const progressPrinter = setInterval(() => {
-      console.log(`Found ${this.numLoopsFound} loops so far`);
-      // console.log(this.path, this.newStep);
+      console.log(`Found ${this.numLoopsFound} loops so far (now running ${this.probeIds.filter(x => x !== undefined).length} worms)`);
+      // console.log(this.probeIds, this.path, this.newStep);
     }, 1000);
     if (this.solutionFile) {
       await writeFile(this.solutionFile, '');
     }
     let counter = 0;
 
-    const probeIds: string [] = [];
-    for (let runner = 0; runner < NUM_RUNNERS; runner++) {
-      probeIds[runner] = this.newProbeId();
-      this.path[probeIds[runner]] = [];
-      this.newStep[probeIds[runner]] = this.getBoredNodeWithOutgoingLinks();
-    }
+    setInterval(() => {
+      const runner = this.findEmptyRunner();
+      this.probeIds[runner] = this.newProbeId();
+      this.path[this.probeIds[runner]] = [];
+      this.newStep[this.probeIds[runner]] = this.getBoredNodeWithOutgoingLinks();
+      // console.log(`start ${runner} ${this.probeIds[runner]}`, this.probeIds);
+    }, WORM_START_INTERVAL);
 
     try {
       while (counter++ < MAX_NUM_STEPS) {
-        for (let runner = 0; runner < NUM_RUNNERS; runner++) {
-          const done1 = await this.work1(probeIds[runner]);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        // console.log(`Loop for work1 (${counter})`, this.probeIds);
+        for (let runner = 0; runner < MAX_NUM_RUNNERS; runner++) {
+          if (this.probeIds[runner] === undefined) {
+            continue;
+          }
+          // console.log(`work1 ${runner} ${this.probeIds[runner]}`)
+          const done1 = await this.work1(this.probeIds[runner]);
           if (done1) {
-            // console.log('done1 with', probeIds[runner]);
-            probeIds[runner] = this.newProbeId();
-            this.path[probeIds[runner]] = [];
-            this.newStep[probeIds[runner]] = this.getBoredNodeWithOutgoingLinks();
+            // console.log(`done1 ${runner} ${this.probeIds[runner]}`);
+            delete this.probeIds[runner];
           }
         }
-        for (let runner = 0; runner < NUM_RUNNERS; runner++) {
-          const done2 = await this.work2(probeIds[runner]);
+        // console.log(`Loop for work2 (${counter})`, this.probeIds);
+        for (let runner = 0; runner < MAX_NUM_RUNNERS; runner++) {
+          if (this.probeIds[runner] === undefined) {
+            continue;
+          }
+          // console.log(`work2 ${runner} ${this.probeIds[runner]}`)
+          const done2 = await this.work2(this.probeIds[runner]);
           if (done2) {
-            // console.log('done2 with', probeIds[runner]);
-            probeIds[runner] = this.newProbeId();
-            this.path[probeIds[runner]] = [];
-            this.newStep[probeIds[runner]] = this.getBoredNodeWithOutgoingLinks();
+            // console.log(`done2 ${runner} ${this.probeIds[runner]}`);
+            delete this.probeIds[runner];
           }
         }
       }
