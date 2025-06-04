@@ -214,16 +214,16 @@ export class BirdsEyeWorm {
 
     try {
       while (counter++ < MAX_NUM_STEPS) {
-        await Promise.all(probeIds.map(async (probeId) => {
-          const done = await this.work1(probeId);
+        for (let runner = 0; runner < probeIds.length; runner++) {
+          const done = await this.work1(probeIds[runner]);
           if (done) {
-            this.path[probeId] = [];
-            this.newStep[probeId] = this.graph.getFirstNode(); // TODO: break out of the loop here
+            this.path[probeIds[runner]] = [];
+            this.newStep[probeIds[runner]] = this.graph.getFirstNode(); // TODO: break out of the loop here
           }
-        }));
-        await Promise.all(probeIds.map(async (probeId) => {
-          await this.work2(probeId);
-        }));
+        }
+        for (let runner = 0; runner < probeIds.length; runner++) {
+          await this.work2(probeIds[runner]);
+        }
       }
     } catch (e) {
       if (e.message === 'Graph is empty') {
