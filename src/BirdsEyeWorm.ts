@@ -137,7 +137,7 @@ export class BirdsEyeWorm {
     }
     return newStep;
   }
-  async work(probeId: string): Promise<void> {
+  async work1(probeId: string): Promise<boolean> {
     // console.log('Step', this.path, this.newStep);
     this.pushPath(probeId, this.newStep);
     // console.log('picking first option from', this.newStep);
@@ -161,8 +161,7 @@ export class BirdsEyeWorm {
         // this.printLine('finished   ', this.path, backtracked.reverse());
       }
       // no this.paths left, start with a new worm
-      this.path = [];
-      this.newStep = this.graph.getFirstNode(); // TODO: break out of the loop here
+      return true;
     } else {
       if (backtracked.length > 0) {
         // this.printLine('backtracked', this.path, backtracked.reverse());
@@ -172,6 +171,9 @@ export class BirdsEyeWorm {
       this.newStep = this.getNewStep(probeId, this.newStep);
       // console.log('considering', this.path, this.newStep);
     }
+    return false;
+  }
+  async work2(probeId: string): Promise<void> {
     // check for loops in this.path
     const pos = this.path.indexOf(this.newStep);
     if (pos !== -1) {
@@ -208,7 +210,12 @@ export class BirdsEyeWorm {
     let counter = 0;
     try {
       while (counter++ < MAX_NUM_STEPS) {
-        await this.work('the-worm');
+        const done = await this.work1('the-worm');
+        if (done) {
+          this.path = [];
+          this.newStep = this.graph.getFirstNode(); // TODO: break out of the loop here
+        }
+        await this.work2('the-worm');
       }
     } catch (e) {
       if (e.message === 'Graph is empty') {
