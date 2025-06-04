@@ -52,7 +52,7 @@ lineReader.on('close', async function () {
   }
 
   // throw new Error('links check OK!');
-  await birdsEyeWorm.runWorm();
+  await birdsEyeWorm.runWorms();
   Object.keys(birdsEyeWorm.stats)
     .filter((loopLength) => loopLength !== '2')
     .forEach((loopLength: string) => {
