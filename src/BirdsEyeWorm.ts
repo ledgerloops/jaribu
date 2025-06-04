@@ -30,6 +30,7 @@ export class BirdsEyeWorm {
   private numLoopsFound: number;
   private probingReport: boolean;
   private solutionFile: string;
+  private currentProbe: { [node: string]: string } = {};
   constructor(probingReport: boolean, solutionFile?: string) {
     this.probingReport = probingReport;
     this.solutionFile = solutionFile;
@@ -101,9 +102,34 @@ export class BirdsEyeWorm {
     }
     return smallestWeight;
   }
-  async work(): Promise<void> {
+  popPath(probeId: string): string {
+    const popped = this.path.pop();
+    if (this.currentProbe[popped] !== probeId) {
+      throw new Error(`Popping node ${popped} who does not know that it is in probe ${probeId}`);
+    }
+    delete this.currentProbe[popped];
+    return popped;
+  }
+  pushPath(probeId: string, node: string): void {
+    if (typeof this.currentProbe[node] !== 'undefined') {
+      throw new Error(`Attempt to push node ${node} onto path ${probeId} but it is busy with ${this.currentProbe[node]}`);
+    }
+    this.path.push(node);
+    this.currentProbe[node] = probeId;
+  }
+  splicePath(probeId: string, pos: number): string[] {
+    const spliced = this.path.splice(pos);
+    spliced.forEach((node: string): void => {
+      if (this.currentProbe[node] !== probeId) {
+        throw new Error(`Splicing node ${node} who does not know that it is in probe ${probeId}`);
+      }
+      delete this.currentProbe[node];
+    });
+    return spliced;
+  }
+  async work(probeId: string): Promise<void> {
     // console.log('Step', this.path, this.newStep);
-    this.path.push(this.newStep);
+    this.pushPath(probeId, this.newStep);
     // console.log('picking first option from', this.newStep);
     // console.log(this.path);
     const backtracked = [];
@@ -113,7 +139,7 @@ export class BirdsEyeWorm {
     ) {
       // console.log('no outgoing links', this.path);
       // backtrack
-      const previousStep = this.path.pop();
+      const previousStep = this.popPath(probeId);
       backtracked.push(previousStep);
       if (this.path.length > 0) {
         this.graph.removeLink(this.path[this.path.length - 1], previousStep);
@@ -139,7 +165,7 @@ export class BirdsEyeWorm {
     // check for loops in this.path
     const pos = this.path.indexOf(this.newStep);
     if (pos !== -1) {
-      const loop = this.path.splice(pos).concat(this.newStep);
+      const loop = this.splicePath(probeId, pos).concat(this.newStep);
       const smallestWeight = this.netLoop(loop);
       // this.printLine(`found loop `, this.path, loop);
       this.numLoopsFound++;
@@ -172,7 +198,7 @@ export class BirdsEyeWorm {
     let counter = 0;
     try {
       while (counter++ < MAX_NUM_STEPS) {
-        await this.work();
+        await this.work('the-worm');
       }
     } catch (e) {
       if (e.message === 'Graph is empty') {
