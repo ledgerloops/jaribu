@@ -26,7 +26,7 @@ export class BirdsEyeWorm {
     };
   } = {};
   private path: { [probeId: string]: string[] } = {};
-  private newStep: string;
+  private newStep:  { [probeId: string]: string } = {};
   private numLoopsFound: number;
   private probingReport: boolean;
   private solutionFile: string;
@@ -138,9 +138,9 @@ export class BirdsEyeWorm {
     return newStep;
   }
   async work1(probeId: string): Promise<boolean> {
-    // console.log('Step', this.path[probeId], this.newStep);
-    this.pushPath(probeId, this.newStep);
-    // console.log('picking first option from', this.newStep);
+    // console.log('Step', this.path[probeId], this.newStep[probeId]);
+    this.pushPath(probeId, this.newStep[probeId]);
+    // console.log('picking first option from', this.newStep[probeId]);
     // console.log(this.path[probeId]);
     const backtracked = [];
     while (
@@ -155,7 +155,7 @@ export class BirdsEyeWorm {
         this.graph.removeLink(this.path[probeId][this.path[probeId].length - 1], previousStep);
       }
     }
-    // we now now that either this.newStep has outgoing links, or this.path[probeId] is empty
+    // we now now that either this.newStep[probeId] has outgoing links, or this.path[probeId] is empty
     if (this.path[probeId].length === 0) {
       if (backtracked.length > 0) {
         // this.printLine('finished   ', this.path[probeId], backtracked.reverse());
@@ -165,19 +165,19 @@ export class BirdsEyeWorm {
     } else {
       if (backtracked.length > 0) {
         // this.printLine('backtracked', this.path[probeId], backtracked.reverse());
-        this.newStep = this.path[probeId][this.path[probeId].length - 1];
-        // console.log('continuing from', this.path[probeId], this.newStep);
+        this.newStep[probeId] = this.path[probeId][this.path[probeId].length - 1];
+        // console.log('continuing from', this.path[probeId], this.newStep[probeId]);
       }
-      this.newStep = this.getNewStep(probeId, this.newStep);
-      // console.log('considering', this.path[probeId], this.newStep);
+      this.newStep[probeId] = this.getNewStep(probeId, this.newStep[probeId]);
+      // console.log('considering', this.path[probeId], this.newStep[probeId]);
     }
     return false;
   }
   async work2(probeId: string): Promise<void> {
     // check for loops in this.path[probeId]
-    const pos = this.path[probeId].indexOf(this.newStep);
+    const pos = this.path[probeId].indexOf(this.newStep[probeId]);
     if (pos !== -1) {
-      const loop = this.splicePath(probeId, pos).concat(this.newStep);
+      const loop = this.splicePath(probeId, pos).concat(this.newStep[probeId]);
       const smallestWeight = this.netLoop(loop);
       // this.printLine(`found loop `, this.path[probeId], loop);
       this.numLoopsFound++;
@@ -190,8 +190,8 @@ export class BirdsEyeWorm {
             .join(' ') + '\n',
         );
       }
-      this.newStep = this.getNewStep(probeId);
-      // console.log(`Continuing with`, this.path[probeId], this.newStep);
+      this.newStep[probeId] = this.getNewStep(probeId);
+      // console.log(`Continuing with`, this.path[probeId], this.newStep[probeId]);
     }
   }
   // removes dead ends as it finds them.
@@ -203,7 +203,7 @@ export class BirdsEyeWorm {
     const progressPrinter = setInterval(() => {
       console.log(`Found ${this.numLoopsFound} loops so far`);
     }, 1000);
-    this.newStep = this.graph.getFirstNode(); // TODO: randomize this
+    this.newStep[probeId] = this.graph.getFirstNode(); // TODO: randomize this
     if (this.solutionFile) {
       await writeFile(this.solutionFile, '');
     }
@@ -214,7 +214,7 @@ export class BirdsEyeWorm {
         const done = await this.work1(probeId);
         if (done) {
           this.path[probeId] = [];
-          this.newStep = this.graph.getFirstNode(); // TODO: break out of the loop here
+          this.newStep[probeId] = this.graph.getFirstNode(); // TODO: break out of the loop here
         }
         await this.work2(probeId);
       }
