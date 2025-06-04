@@ -4,7 +4,8 @@ import { writeFile, appendFile } from 'node:fs/promises';
 
 const MAX_NUM_STEPS = 1000000;
 const MAX_NUM_RUNNERS = 100;
-const WORM_START_INTERVAL = 100;
+const WORM_START_INTERVAL = parseInt(process.argv[2]);
+console.log({ WORM_START_INTERVAL });
 let longestLoop = [];
 let longestLoopAmount = 0;
 
@@ -253,9 +254,13 @@ export class BirdsEyeWorm {
   // nets loops as it finds them.
   async runWorms(): Promise<void> {
     this.numLoopsFound = 0;
+    let timer = 0;
     const progressPrinter = setInterval(() => {
       console.log(`Found ${this.numLoopsFound} loops so far (now running ${this.probeIds.filter(x => x !== undefined).length} worms)`);
       // console.log(this.probeIds, this.path, this.newStep);
+      if (++timer === 4) {
+        process.exit();
+      }
     }, 1000);
     if (this.solutionFile) {
       await writeFile(this.solutionFile, '');
