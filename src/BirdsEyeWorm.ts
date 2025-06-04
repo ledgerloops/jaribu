@@ -1,7 +1,9 @@
+import { randomBytes } from 'node:crypto';
 import { Graph } from './BirdsEyeGraph.js';
 import { writeFile, appendFile } from 'node:fs/promises';
 
 const MAX_NUM_STEPS = 1000000;
+const NUM_RUNNERS = 1;
 let longestLoop = [];
 let longestLoopAmount = 0;
 
@@ -194,6 +196,9 @@ export class BirdsEyeWorm {
       // console.log(`Continuing with`, this.path[probeId], this.newStep[probeId]);
     }
   }
+  newProbeId(): string {
+    return randomBytes(8).toString("hex");
+  }
   // removes dead ends as it finds them.
   // nets loops as it finds them.
   async runWorms(): Promise<void> {
@@ -206,22 +211,23 @@ export class BirdsEyeWorm {
     }
     let counter = 0;
 
-    const probeIds =  ['the-worm'];
-    probeIds.forEach(probeId => {
-      this.path[probeId] = [];
-      this.newStep[probeId] = this.graph.getFirstNode(); // TODO: randomize this
-    });
+    const probeIds: string [] = [];
+    for (let runner = 0; runner < NUM_RUNNERS; runner++) {
+      probeIds[runner] = this.newProbeId();
+      this.path[probeIds[runner]] = [];
+      this.newStep[probeIds[runner]] = this.graph.getFirstNode(); // TODO: randomize this
+    }
 
     try {
       while (counter++ < MAX_NUM_STEPS) {
-        for (let runner = 0; runner < probeIds.length; runner++) {
+        for (let runner = 0; runner < NUM_RUNNERS; runner++) {
           const done = await this.work1(probeIds[runner]);
           if (done) {
             this.path[probeIds[runner]] = [];
             this.newStep[probeIds[runner]] = this.graph.getFirstNode(); // TODO: break out of the loop here
           }
         }
-        for (let runner = 0; runner < probeIds.length; runner++) {
+        for (let runner = 0; runner < NUM_RUNNERS; runner++) {
           await this.work2(probeIds[runner]);
         }
       }
